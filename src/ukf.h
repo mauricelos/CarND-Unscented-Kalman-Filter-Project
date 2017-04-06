@@ -33,28 +33,28 @@ public:
   MatrixXd Xsig_pred_;
 
   ///* time when the state is true, in us
-  long long time_us_;
+  long long previous_timestamp_;
 
   ///* Process noise standard deviation longitudinal acceleration in m/s^2
-  double std_a_;
+  long double std_a_;
 
   ///* Process noise standard deviation yaw acceleration in rad/s^2
-  double std_yawdd_;
+  long double std_yawdd_;
 
   ///* Laser measurement noise standard deviation position1 in m
-  double std_laspx_;
+  long double std_laspx_;
 
   ///* Laser measurement noise standard deviation position2 in m
-  double std_laspy_;
+  long double std_laspy_;
 
   ///* Radar measurement noise standard deviation radius in m
-  double std_radr_;
+  long double std_radr_;
 
   ///* Radar measurement noise standard deviation angle in rad
-  double std_radphi_;
+  long double std_radphi_;
 
   ///* Radar measurement noise standard deviation radius change in m/s
-  double std_radrd_ ;
+  long double std_radrd_ ;
 
   ///* Weights of sigma points
   VectorXd weights_;
@@ -66,13 +66,13 @@ public:
   int n_aug_;
 
   ///* Sigma point spreading parameter
-  double lambda_;
+  long double lambda_;
 
   ///* the current NIS for radar
-  double NIS_radar_;
+  long double NIS_radar_;
 
   ///* the current NIS for laser
-  double NIS_laser_;
+  long double NIS_laser_;
 
   /**
    * Constructor
@@ -108,6 +108,7 @@ public:
    * @param meas_package The measurement at k+1
    */
   void UpdateRadar(MeasurementPackage meas_package);
+
 };
 
 #endif /* UKF_H */

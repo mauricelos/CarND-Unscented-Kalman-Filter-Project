@@ -104,33 +104,41 @@ int main(int argc, char* argv[]) {
       meas_package.sensor_type_ = MeasurementPackage::RADAR;
       meas_package.raw_measurements_ = VectorXd(3);
       float ro;
-      float phi;
+      float theta;
       float ro_dot;
       iss >> ro;
-      iss >> phi;
+      iss >> theta;
       iss >> ro_dot;
-      meas_package.raw_measurements_ << ro, phi, ro_dot;
+      meas_package.raw_measurements_ << ro, theta, ro_dot;
       iss >> timestamp;
       meas_package.timestamp_ = timestamp;
       measurement_pack_list.push_back(meas_package);
     }
 
-      // read ground truth data to compare later
-      float x_gt;
-      float y_gt;
-      float vx_gt;
-      float vy_gt;
-      iss >> x_gt;
-      iss >> y_gt;
-      iss >> vx_gt;
-      iss >> vy_gt;
-      gt_package.gt_values_ = VectorXd(4);
-      gt_package.gt_values_ << x_gt, y_gt, vx_gt, vy_gt;
-      gt_pack_list.push_back(gt_package);
+    // read ground truth data to compare later
+    float x_gt;
+    float y_gt;
+    float vx_gt;
+    float vy_gt;
+    iss >> x_gt;
+    iss >> y_gt;
+    iss >> vx_gt;
+    iss >> vy_gt;
+    gt_package.gt_values_ = VectorXd(4);
+    gt_package.gt_values_ << x_gt, y_gt, vx_gt, vy_gt;
+    gt_pack_list.push_back(gt_package);
   }
 
   // Create a UKF instance
   UKF ukf;
+  
+  // NIS Target for Laser and Radar (2, 3 measurements @ 95%)
+  double NIS_Laser = 5.991;
+  double NIS_Radar = 7.815;
+    
+  // saving all measurements over 95%
+  int Laser_95 = 0;
+  int Radar_95 = 0;
 
   // used to compute the RMSE later
   vector<VectorXd> estimations;
@@ -138,9 +146,9 @@ int main(int argc, char* argv[]) {
 
   // start filtering from the second frame (the speed is unknown in the first
   // frame)
-
+    
   size_t number_of_measurements = measurement_pack_list.size();
-
+    
   // column names for output file
   out_file_ << "px" << "\t";
   out_file_ << "py" << "\t";
@@ -154,7 +162,6 @@ int main(int argc, char* argv[]) {
   out_file_ << "vx_true" << "\t";
   out_file_ << "vy_true" << "\t";
   out_file_ << "NIS" << "\n";
-
 
   for (size_t k = 0; k < number_of_measurements; ++k) {
     // Call the UKF-based fusion
@@ -189,34 +196,49 @@ int main(int argc, char* argv[]) {
     out_file_ << gt_pack_list[k].gt_values_(1) << "\t";
     out_file_ << gt_pack_list[k].gt_values_(2) << "\t";
     out_file_ << gt_pack_list[k].gt_values_(3) << "\t";
-
+      
     // output the NIS values
-    
     if (measurement_pack_list[k].sensor_type_ == MeasurementPackage::LASER) {
-      out_file_ << ukf.NIS_laser_ << "\n";
+        out_file_ << ukf.NIS_laser_ << "\n";
     } else if (measurement_pack_list[k].sensor_type_ == MeasurementPackage::RADAR) {
-      out_file_ << ukf.NIS_radar_ << "\n";
+        out_file_ << ukf.NIS_radar_ << "\n";
     }
 
+    //counting all values over 95% certainty
+    if(ukf.NIS_laser_ < NIS_Laser)
+    {
+    	Laser_95++;
+    }
+    if(ukf.NIS_radar_ < NIS_Radar)
+    {
+    	Radar_95++;
+    }
 
-    // convert ukf x vector to cartesian to compare to ground truth
-    VectorXd ukf_x_cartesian_ = VectorXd(4);
+    VectorXd ufk_estimate(4);
 
-    float x_estimate_ = ukf.x_(0);
-    float y_estimate_ = ukf.x_(1);
-    float vx_estimate_ = ukf.x_(2) * cos(ukf.x_(3));
-    float vy_estimate_ = ukf.x_(2) * sin(ukf.x_(3));
+    double p_x = ukf.x_(0);
+    double p_y = ukf.x_(1);
+    double v = ukf.x_(2);
+    double v1 = cos(ukf.x_(3))* ukf.x_(2);
+    double v2 = sin(ukf.x_(3))* ukf.x_(2);
     
-    ukf_x_cartesian_ << x_estimate_, y_estimate_, vx_estimate_, vy_estimate_;
-    
-    estimations.push_back(ukf_x_cartesian_);
+    ufk_estimate << p_x, p_y, v1, v2;
+
+    estimations.push_back(ufk_estimate);
     ground_truth.push_back(gt_pack_list[k].gt_values_);
-
+	
   }
 
   // compute the accuracy (RMSE)
   Tools tools;
   cout << "Accuracy - RMSE:" << endl << tools.CalculateRMSE(estimations, ground_truth) << endl;
+
+  // compute NIS @95%
+  float Laser_certainty = double(100.0*(Laser_95)/number_of_measurements);
+  float Radar_certainty = double(100.0*(Radar_95)/number_of_measurements);
+
+  cout << "NIS Laser Certainty: " << Laser_certainty << "%" << endl;
+  cout << "NIS Radar Certainty: " << Radar_certainty << "%" << endl;
 
   // close files
   if (out_file_.is_open()) {
