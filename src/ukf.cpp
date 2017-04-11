@@ -41,10 +41,10 @@ UKF::UKF() {
     std_radr_ = 0.3;
     
     // Radar measurement noise standard deviation angle in rad
-    std_radphi_ = 0.0175;
+    std_radphi_ = 0.03;
     
     // Radar measurement noise standard deviation radius change in m/s
-    std_radrd_ = 0.25;
+    std_radrd_ = 0.3;
     
     //set state dimension
     n_x_ = 5;
@@ -99,6 +99,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
             //initialize rho, phi and calculate px,py
             long double rho = meas_package.raw_measurements_[0];
             long double phi = meas_package.raw_measurements_[1];
+            //long double rho_dot = meas_package.raw_measurements_[2];
             
             px = rho * cos(phi);
             py = rho * sin(phi);
@@ -122,6 +123,15 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
             //initialize px,py from laser data
             px = meas_package.raw_measurements_[0];
             py = meas_package.raw_measurements_[1];
+            
+            if(fabs(px) < 0.0001){
+                px = 0.0001;
+                
+            }
+            if(fabs(py) < 0.0001){
+                py = 0.0001;
+                
+            }
             
             x_ << px, py, 0, 0, 0;
             previous_timestamp_ = meas_package.timestamp_;
