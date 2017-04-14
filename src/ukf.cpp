@@ -93,16 +93,18 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
         
         long double px = 0;
         long double py = 0;
+        long double v = 0;
         
         if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
             
             //initialize rho, phi and calculate px,py
             long double rho = meas_package.raw_measurements_[0];
             long double phi = meas_package.raw_measurements_[1];
-            //long double rho_dot = meas_package.raw_measurements_[2];
+            long double rho_dot = meas_package.raw_measurements_[2];
             
             px = rho * cos(phi);
             py = rho * sin(phi);
+            v = rho_dot;
             
             if(fabs(px) < 0.0001){
                 px = 0.0001;
@@ -113,7 +115,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
                 
             }
             
-            x_ << px, py, 0, 0, 0;
+            x_ << px, py, v, 0, 0;
             previous_timestamp_ = meas_package.timestamp_;
             is_initialized_ = true;
             
